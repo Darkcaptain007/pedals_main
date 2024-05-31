@@ -1,27 +1,26 @@
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import SearchContext from "../context/SearchContext";
-import { useNavigate, Link, useParams } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
+import { useDispatch } from "react-redux";
+import { setSearch } from "../features/search/searchSlice";
 
 const Home = () => {
   const { register, handleSubmit } = useForm();
 
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const findCycles = async (data) => {
+    dispatch(setSearch(data));
 
-  const { setSearch } = React.useContext(SearchContext);
-
-  const findCycles = (data) => {
-    setSearch(data);
     navigate("/cycles");
   };
 
-  let userId;
+  const [userId, setUserId] = useState("");
 
   const getCurrentUser = async () => {
     const res = await axios.get("/api/v1/users/current-user");
-    console.log(res.data.data._id);
-    userId = res.data.data._id;
+    setUserId(res.data.data._id);
   };
 
   useEffect(() => {

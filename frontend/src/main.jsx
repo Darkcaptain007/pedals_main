@@ -14,8 +14,13 @@ import {
   Home,
   Cycles,
   Profile,
-  CycleLenderDetails,
+  CycleUserDetails,
+  PayApp,
+  PaymentSuccess,
+  OtpVerified,
 } from "./pages";
+import { store } from "./app/store.js";
+import { Provider } from "react-redux";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -24,7 +29,7 @@ const router = createBrowserRouter(
       <Route path="login" element={<Login />} />
       <Route path="home" element={<Home />} />
       <Route path="cycles" element={<Cycles />} />
-      <Route path="cycle/:cycleId" element={<CycleLenderDetails />} />
+      <Route path="cycle/:cycleId" element={<CycleUserDetails />} />
       <Route path="user/:userId" element={<Profile />} />
     </Route>
   )
@@ -32,6 +37,8 @@ const router = createBrowserRouter(
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <Provider store={store}>
+      <RouterProvider router={router} />
+    </Provider>
   </React.StrictMode>
 );

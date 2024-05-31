@@ -1,29 +1,35 @@
 import otpGenerator from "otp-generator";
 import { OTP } from "../models/OTPgenerator.model.js";
 import { User } from "../models/user.model.js";
+import { Lease } from "../models/lease.model.js";
 import nodemailer from "nodemailer";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Cycle } from "../models/cycle.model.js";
+import { apiError } from "../utils/apiError.js";
 const sendOTPLender = asyncHandler(async (req, res) => {
   try {
-    const { email } = req.body;
+    const { _id } = req.body;
     console.log(req.body);
-    const checkUserPresent = await User.findOne({ email: email });
-    console.log(checkUserPresent);
-    if (!checkUserPresent) {
+
+    if (!_id) {
+      throw new apiError(400, "Cycle id not found.");
+    }
+
+    const lender = await User.findOne({ _id: _id });
+    console.log(lender);
+    if (!lender) {
       return res.status(401).json({
         success: false,
         message: "User Not found",
       });
     }
-    // console.log(checkUserPresent._id);
-    const lender = await User.findOne(checkUserPresent._id);
-
+    let email = lender.email;
     let otp = otpGenerator.generate(6, {
       upperCaseAlphabets: false,
       lowerCaseAlphabets: false,
       specialChars: false,
     });
+
     let result = await OTP.findOne({ otp: otp });
     while (result) {
       otp = otpGenerator.generate(6, {
@@ -33,7 +39,8 @@ const sendOTPLender = asyncHandler(async (req, res) => {
     }
     const otpPayload = { email, otp };
     const otpBody = await OTP.create(otpPayload);
-    // console.log(otpBody);
+
+    console.log(otpBody);
 
     let transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
@@ -45,9 +52,10 @@ const sendOTPLender = asyncHandler(async (req, res) => {
         pass: process.env.MAIL_PASS,
       },
     });
+
     let info = await transporter.sendMail({
       from: "www.pedals.com-Pedals",
-      to: email,
+      to: lender.email,
       subject: "Verify your otp",
       html: `    <table align="center" border="0" cellpadding="0" cellspacing="0" width="600">
       <tr>
@@ -61,7 +69,7 @@ const sendOTPLender = asyncHandler(async (req, res) => {
                   Your OTP for verification is: <strong>${otp}</strong>
               </p>
               <p style="font-size: 16px; color: #333333;">
-                  Please use this OTP to verify your account using this link {http://localhost:5400/api/v1/verify/Lender/${checkUserPresent._id}}.
+                  Please use this OTP to verify your account using this link {http://localhost:5400/api/v1/verify/Lender/${lender._id}}.
               </p>
           </td>
       </tr>
@@ -74,6 +82,7 @@ const sendOTPLender = asyncHandler(async (req, res) => {
       </tr>
   </table>`,
     });
+
     await transporter.sendMail(info);
     res.status(200).json({
       success: true,

@@ -48,17 +48,11 @@ const registerUser = asyncHandler(async (req, res) => {
 
   const avatarLocalPath = req.file?.path;
 
-  console.log("avatarLocalPath: ", avatarLocalPath); //TBR
-
   if (!avatarLocalPath) {
     throw new apiError(400, "Avatar local path not found.");
   }
 
-  console.log("Before upploading to cloudinary."); //TBR
-
   const avatar = await uploadToCloudinary(avatarLocalPath);
-
-  console.log("After uploading to cloudinary. avatar: ", avatar); //TBR
 
   if (!avatar) {
     throw new apiError(400, "Could not upload avatar to cloudinary.");
@@ -157,19 +151,25 @@ const logoutUser = asyncHandler(async (req, res) => {
 });
 
 const toggleCycleStatus = asyncHandler(async (req, res) => {
-  const id = req.user_id;
+  const id = req.user._id;
   const { landmark, availableTill, rentRate } = req.body;
 
-  await Cycle.findOneAndUpdate(
-    { owner: id },
-    {
-      $set: {
-        landmark: landmark || "",
-        rentRate: rentRate || 0,
-        isActive: !isActive || false,
-      },
-    }
-  );
+  console.log("Finding cycle.");
+  const cycle = await Cycle.findOne({
+    owner: id,
+  });
+
+  console.log("Changing cycle status.");
+  await Cycle.findByIdAndUpdate(cycle._id, {
+    $set: {
+      isActive: !cycle.isActive,
+      landmark,
+      availableTill,
+      rentRate,
+    },
+  });
+
+  console.log("Completed changing cycle status.");
 
   res
     .status(200)

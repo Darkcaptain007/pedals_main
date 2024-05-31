@@ -19,10 +19,9 @@ const uploadCycleDetails = asyncHandler(async (req, res) => {
     throw new apiError(401, "Cycle already exists");
   }
 
-  const { model, rentRate, cycleType } = req.body;
+  const { model, cycleType } = req.body;
 
   console.log("Cycle model: ", model); // TBR
-  console.log("Cycle rent rate: ", rentRate); // TBR
 
   if (!model || !cycleType) {
     throw new apiError(400, "Model and cycleType are required.");
@@ -46,7 +45,6 @@ const uploadCycleDetails = asyncHandler(async (req, res) => {
     model,
     cycleType,
     owner: req.user._id,
-    rentRate: rentRate ? rentRate : 0,
     image: image.url,
   });
 
@@ -70,52 +68,86 @@ const uploadCycleDetails = asyncHandler(async (req, res) => {
 const getCycles = asyncHandler(async (req, res) => {
   const { landmark, cycleType } = req.body;
 
-  console.log("End time: ", endTime); // TBR
-  console.log("Landmark: ", landmark); // TBR
-  console.log("Cycle type: ", cycleType); // TBR
-
-  if ([endTime, landmark, cycleType].some((field) => field?.trim === "")) {
+  if ([landmark, cycleType].some((field) => field?.trim === "")) {
     throw new apiError(400, "All fields are required.");
   }
 
-  const cycles = await Cycle.aggregate([
-    {
-      $match: {
-        isActive: false,
-        cycleType: cycleType,
-        landmark: landmark,
-      },
-    },
-    {
-      $lookup: {
-        from: "users",
-        localField: "owner",
-        foreignField: "_id",
-        as: "owner",
-        pipeline: [
-          {
-            $project: {
-              _id: 1,
-              fullName: 1,
-            },
-          },
-        ],
-      },
-    },
-    {
-      $addFields: {
-        owner: {
-          $arrayElemAt: ["$owner", 0],
+  let cycles;
+
+  if (cycleType === "both") {
+    cycles = await Cycle.aggregate([
+      {
+        $match: {
+          isActive: true,
+          landmark: landmark,
         },
       },
-    },
-  ]);
+      {
+        $lookup: {
+          from: "users",
+          localField: "owner",
+          foreignField: "_id",
+          as: "owner",
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                fullName: 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $addFields: {
+          owner: {
+            $arrayElemAt: ["$owner", 0],
+          },
+        },
+      },
+    ]);
+  } else {
+    cycles = await Cycle.aggregate([
+      {
+        $match: {
+          isActive: true,
+          cycleType: cycleType,
+          landmark: landmark,
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "owner",
+          foreignField: "_id",
+          as: "owner",
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                fullName: 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $addFields: {
+          owner: {
+            $arrayElemAt: ["$owner", 0],
+          },
+        },
+      },
+    ]);
+  }
+
+  console.log(cycles);
 
   if (!cycles) {
     throw new apiError(500, "Could not fetch cycles.");
   }
 
-  res
+  return res
     .status(200)
     .json(new apiResponse(200, cycles, "Cycles fetched successfully."));
 });
